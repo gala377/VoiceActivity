@@ -1,0 +1,6 @@
+.vscode
+.idea
+dist
+build
+.env
+*.pyc
