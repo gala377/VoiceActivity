@@ -30,7 +30,7 @@ class VoiceActivity(discord.Client):
     async def on_message(self, message):
         if message.author == self.user:
             return
-        elif message.content == "ej staszek":
+        elif message.content == "ej staszek" and message.guild is not None:
             await self._in_chan_callout(message)
         elif message.guild is None:
             ctx = self._users_context.get(message.author.id)
