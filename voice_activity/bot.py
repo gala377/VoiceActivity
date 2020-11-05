@@ -1,8 +1,8 @@
 import discord
 import asyncio
 import re
-import commands
 
+from voice_activity import commands
 from collections import defaultdict
 
 
