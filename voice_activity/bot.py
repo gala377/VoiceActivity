@@ -21,12 +21,11 @@ class VoiceActivity(discord.Client):
         self._cmds = {
             cmd.name(): cmd(self) for cmd in commands.commands()
         }
-        print(self._cmds)
 
     async def on_message(self, message):
         if message.author == self.user:
             return
-        elif message.content == "ej staszek" and message.guild is not None:
+        elif message.guild is not None and self.user in message.mentions:
             await self._in_chan_callout(message)
         elif message.guild is None:
             ctx = self._users_context.get(message.author.id)
@@ -46,7 +45,6 @@ class VoiceActivity(discord.Client):
     async def _run_cmd(self, user, guild, content):
         try:
             cmd, args = self._parse_cmd(content)
-            print(f"I got cmd {cmd} with args {args}")
             cmd = self._cmds.get(cmd, self._unknown_command)
             ctx = {"user": user, "guild": guild}
             await cmd(ctx, *args)
@@ -62,7 +60,6 @@ class VoiceActivity(discord.Client):
         """
         try:
             matches = COMMAND_REGEX.findall(mess)
-            print(f"command parsing mathes {matches}")
             matches = [x.strip('"') for x in matches]
             cmd, *args = matches
         except ValueError:
