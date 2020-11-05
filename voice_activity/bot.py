@@ -1,5 +1,7 @@
 import discord
 import asyncio
+import re
+import commands
 
 from collections import defaultdict
 
@@ -7,25 +9,19 @@ from collections import defaultdict
 PER_CHAN_TIMEOUT = 60 # in seconds
 USER_CTX_TIMEOUT = 180 # in seconds
 
-class VoiceActivityError(Exception): ...
-class ParsingError(VoiceActivityError): ...
-class CommandError(VoiceActivityError): ...
-
+COMMAND_REGEX = re.compile(r'([^"].*?|".*?")(?:\s|$)')
 
 class VoiceActivity(discord.Client):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # chan id is globally unique so we do not have
-        # to store guild id
         self._subs = defaultdict(set)
         self._timeouts = set()
         self._users_context = dict()
         self._cmds = {
-            'sub': self._sub_command,
-            'unsub': self._unsub_command,
-            'help': self._help_command,
+            cmd.name(): cmd(self) for cmd in commands.commands()
         }
+        print(self._cmds)
 
     async def on_message(self, message):
         if message.author == self.user:
@@ -50,12 +46,12 @@ class VoiceActivity(discord.Client):
     async def _run_cmd(self, user, guild, content):
         try:
             cmd, args = self._parse_cmd(content)
+            print(f"I got cmd {cmd} with args {args}")
             cmd = self._cmds.get(cmd, self._unknown_command)
-            await cmd(user, guild, *args)
-        except VoiceActivityError as e:
-            await user.send(str(e))
+            ctx = {"user": user, "guild": guild}
+            await cmd(ctx, *args)
         except Exception as e:
-            await user.send(f"Unexpected Error {str(e)}")
+            await user.send(str(e))
 
     def _parse_cmd(self, mess):
         """
@@ -65,33 +61,16 @@ class VoiceActivity(discord.Client):
         be raised.
         """
         try:
-            cmd, *args = mess.split(" ")
+            matches = COMMAND_REGEX.findall(mess)
+            print(f"command parsing mathes {matches}")
+            matches = [x.strip('"') for x in matches]
+            cmd, *args = matches
         except ValueError:
-            raise ParsingError("wrong command format, expected `cmd arg2 arg2...`")
+            raise ValueError("wrong command format, expected `cmd arg2 arg2...`")
         return cmd, args
 
-    async def _sub_command(self, user, guild, chan):
-        try:
-            [chan] = [ch for ch in guild.voice_channels if ch.name == chan]
-        except ValueError:
-            raise CommandError("channel doesn't exist")
-        self._subs[chan.id].add(user)
-        await user.send(f"subscribed you to channel {chan.name}")
-
-    async def _unsub_command(self, user, guild, chan):
-        try:
-            [chan] = [ch for ch in guild.voice_channels if ch.name == chan]
-        except ValueError:
-            raise CommandError("channel doesn't exist")
-        self._subs[chan.id].remove(user)
-        await user.send(f"unsubscribed you from channel {chan.name}")
-
-    async def _help_command(self, user, guild):
-        await user.send("sub/unsub channel_name")
-
-    async def _unknown_command(self, user, guild, *args):
-        await user.send("Unknown command")
-        await self._help_command(user, guild)
+    async def _unknown_command(self, ctx, *args):
+        await ctx["user"].send("Unknown command, maybe try `help`?")
 
     async def on_voice_state_update(self, mem, bef, after):
         channel_changed = bef.channel != after.channel
