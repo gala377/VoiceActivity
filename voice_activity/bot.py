@@ -8,7 +8,7 @@ from collections import defaultdict
 
 
 PER_CHAN_TIMEOUT = 60 # in seconds
-USER_CTX_TIMEOUT = 180 # in seconds
+USER_CTX_TIMEOUT = 1200 # in seconds
 
 COMMAND_REGEX = re.compile(r'([^"].*?|".*?")(?:\s|$)')
 
