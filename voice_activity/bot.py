@@ -27,13 +27,18 @@ class VoiceActivity(discord.Client):
         }
 
     async def on_message(self, message):
-        LOGGER.debug("got new message: '%s' from '%s'", message.content, message.author.name)
+        LOGGER.debug("got new message: '%s' from '%s' guild is '%s'", message.content, message.author.name, message.guild)
         if message.author == self.user:
             LOGGER.debug("got self message")
             return
         elif message.guild is not None and self.user in message.mentions:
-            LOGGER.debug("called from guild by %s", message.author.name)
-            await self._in_chan_callout(message)
+            LOGGER.debug("message: '%s' in guild", message.clean_content)
+            if message.clean_content.strip() == f"@{self.user.name}":
+                LOGGER.debug("called from guild by %s", message.author.name)
+                await self._in_chan_callout(message)
+            else:
+                LOGGER.debug("got cmd in guild from %s", message.author.name)
+                await self._run_cmd(message.author, message.guild, message.channel, message.clean_content)
         elif message.guild is None:
             LOGGER.debug("got priv message: '%s' from '%s'", message.content, message.author.name)
             ctx = self._users_context.get(message.author.id)
@@ -43,8 +48,11 @@ class VoiceActivity(discord.Client):
                     "sorry, could you call me from the server you want to execute commands in.")
             else:
                 LOGGER.debug("got context for user %s. Running command.", message.author.name)
-                await self._run_cmd(message.author, ctx.guild, message.content)
-        LOGGER.debug("message not importat for me")
+                dm_chan = message.author.dm_channel
+                if dm_chan is None:
+                    dm_chan = await message.author.create_dm()
+                await self._run_cmd(message.author, ctx.guild, dm_chan, message.content)
+        LOGGER.debug("message not important for me")
 
     async def _in_chan_callout(self, message):
         reply = message.author
@@ -53,12 +61,12 @@ class VoiceActivity(discord.Client):
             asyncio.create_task(self._remove_context(reply.id))
         await reply.send("What do you want from me?")
 
-    async def _run_cmd(self, user, guild, content):
+    async def _run_cmd(self, user, guild, resp_chan, content):
         try:
             cmd, args = self._parse_cmd(content)
             LOGGER.info("got command %s from user %s", cmd, user.name)
             cmd = self._cmds.get(cmd, self._unknown_command)
-            ctx = {"user": user, "guild": guild}
+            ctx = {"user": user, "guild": guild, "resp_chan": resp_chan}
             LOGGER.info("invoking command %s for user %s", cmd, user.name)
             await cmd(ctx, *args)
         except Exception as e:
@@ -73,6 +81,10 @@ class VoiceActivity(discord.Client):
         be raised.
         """
         try:
+            LOGGER.debug("parsing message: '%s'", mess)
+            ment, *rest = mess.split(" ")
+            if ment == f"@{self.user.name}":
+                mess = " ".join(rest).strip()
             matches = COMMAND_REGEX.findall(mess)
             matches = [x.strip('"') for x in matches]
             cmd, *args = matches

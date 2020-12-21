@@ -7,5 +7,5 @@ class HelpCommand(AbstractCommand):
         return "help"
 
     async def run(self, ctx):
-        user = ctx['user']
-        await user.send("sub/unsub channel_name")
+        resp_chan = ctx['resp_chan']
+        await resp_chan.send("sub/unsub channel_name")
