@@ -33,10 +33,9 @@ class VoiceActivity(discord.Client):
         self._bot_listeners = []
         self._registered_plugins = set()
 
-    def autodiscover_plugins(self, mod, visited_modules=None):
+    def autodiscover_plugins(self, mod, *args, visited_modules=None, **kwargs):
         if not inspect.ismodule(mod):
             raise ValueError(f"Autodiscovery can only be done on modules. Passed {mode}")
-
         keys = [k for k in vars(mod) if not k.startswith("_") and not k in EXCLUDE_FROM_AUTODISCOVERY]
         if visited_modules is None:
             visited_modules = set()
@@ -44,7 +43,7 @@ class VoiceActivity(discord.Client):
         for k in keys:
             val = vars(mod)[k]
             if inspect.ismodule(val) and not val in visited_modules:
-                self.autodiscover_plugins(val, visited_modules)
+                self.autodiscover_plugins(val, *args, visited_modules=visited_modules, **kwargs)
             elif isinstance(val, type) and issubclass(val, AbstractPlugin):
                 autodiscover = (
                     not val in self._registered_plugins
@@ -52,7 +51,7 @@ class VoiceActivity(discord.Client):
                     and not "Abstract" in val.__name__)
                 if not autodiscover:
                     continue
-                plug = val(self)
+                plug = val(self, *args, **kwargs)
                 self._registered_plugins.add(val)
                 LOGGER.info(
                     "Adding plugin %s from module: %s",

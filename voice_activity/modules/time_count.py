@@ -23,7 +23,7 @@ LOGGER = logging.getLogger(__name__)
 
 class TimeCountingPlugin(AbstractPlugin):
 
-    def __init__(self, bot):
+    def __init__(self, bot, *args, **kwargs):
         if not hasattr(bot, "storage"):
             raise AttributeError("Storage plugin required to use time counting plugin.")
         bot.storage.time_counting = SimpleNamespace()
