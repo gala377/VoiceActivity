@@ -19,9 +19,8 @@ PER_CHAN_TIMEOUT = 60 # in seconds
 class SubPlugin(AbstractPlugin):
 
     def __init__(self, bot, *args, **kwargs):
-        if hasattr(bot, "storage"):
-            raise AttributeError("Bot already has storage")
-        bot.storage = SimpleNamespace()
+        if not hasattr(bot, "storage"):
+            raise AttributeError("Storage plugin required to run SubModule")
         bot.storage._subs = defaultdict(set)
         bot.add_module(SubCommand)
         bot.add_module(UnsubCommand)
