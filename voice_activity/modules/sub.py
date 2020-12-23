@@ -85,6 +85,6 @@ class NotificationListener(AbstractListener):
 
     async def _revoke_timeout(self, channel_id):
         await asyncio.sleep(PER_CHAN_TIMEOUT)
-        LOGGER.debug("revoking timeout on channel %A", channel_id)
+        LOGGER.debug("revoking timeout on channel %a", channel_id)
         self._timeouts.remove(channel_id)
 

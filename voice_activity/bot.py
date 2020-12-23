@@ -46,18 +46,18 @@ class VoiceActivity(discord.Client):
             if inspect.ismodule(val) and not val in visited_modules:
                 self.autodiscover_plugins(val, visited_modules)
             elif isinstance(val, type) and issubclass(val, AbstractPlugin):
-                    autodiscover = (
-                        not val in self._registered_plugins
-                        and val.auto_discovery
-                        and not "Abstract" in val.__name__)
-                    if not autodiscover:
-                        continue
-                    plug = val(self)
-                    self._registered_plugins.add(val)
-                    LOGGER.info(
-                        "Adding plugin %s from module: %s",
-                        plug.__class__.__name__,
-                        mod.__package__)
+                autodiscover = (
+                    not val in self._registered_plugins
+                    and val.auto_discovery
+                    and not "Abstract" in val.__name__)
+                if not autodiscover:
+                    continue
+                plug = val(self)
+                self._registered_plugins.add(val)
+                LOGGER.info(
+                    "Adding plugin %s from module: %s",
+                    plug.__class__.__name__,
+                    mod.__package__)
 
     def add_module(self, mod_cls, *args, **kwargs):
         objs = []
@@ -95,7 +95,7 @@ class VoiceActivity(discord.Client):
             await cmd(ctx, *args)
         except Exception as e:
             LOGGER.info("couldn't parse command %a", e)
-            await user.send(str(e))
+            await resp_chan.send(str(e))
 
     def _parse_cmd(self, mess):
         """
@@ -118,7 +118,7 @@ class VoiceActivity(discord.Client):
 
     async def _unknown_command(self, ctx, *args):
         LOGGER.info("got unknown command from user %s", ctx['user'].name)
-        await ctx["user"].send("Unknown command, maybe try `help`?")
+        await ctx["resp_chan"].send("Unknown command, maybe try `help`?")
 
     async def on_message(self, message):
         LOGGER.debug("got new message: '%s' from '%s' guild is '%s'", message.content, message.author.name, message.guild)
