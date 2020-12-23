@@ -1,5 +1,9 @@
 import inspect
-from abc import (ABC, abstractmethod, abstractclassmethod)
+
+from abc import (
+    ABC,
+    abstractmethod,
+)
 
 
 def _id_conv(x):
@@ -15,8 +19,8 @@ class AbstractCommand(ABC):
     def __init__(self, bot):
         self._bot = bot
 
-    @abstractclassmethod
-    def name(cls) -> str:
+    @abstractmethod
+    def name(self) -> str:
         """
         Should return commands name.
         When user sends a string starting with the commands
@@ -71,5 +75,21 @@ class AbstractCommand(ABC):
     def subclasses(cls):
         return cls._subclasses.keys()
 
-def commands():
-    return AbstractCommand.subclasses()
+
+class AbstractListener(ABC):
+
+    def __init__(self, bot):
+        self._bot = bot
+
+    async def on_message(self, message) -> bool:
+        return None
+
+    async def on_voice_state_update(self, member, before, after) -> bool:
+        return None
+
+
+class AbstractPlugin(ABC):
+
+    auto_discovery = True
+
+    def __init__(self, bot, *args, **kwargs): ...

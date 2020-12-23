@@ -8,6 +8,7 @@ authors = ["Rafał Galczak <r.galczak@gmail.com>"]
 python = "^3.8"
 "discord.py" = "^1.5.1"
 python-dotenv = "^0.15.0"
+stdlib-list = "^0.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

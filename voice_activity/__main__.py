@@ -2,7 +2,8 @@ import dotenv
 import os
 import logging
 
-from voice_activity import bot
+import voice_activity
+import voice_activity.modules
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
@@ -13,7 +14,8 @@ def main():
     if token is None:
         raise RuntimeError("BOT_TOKEN env variable has to be set")
     LOGGER.info("Running bot...")
-    bot.run_client(token)
+    bot = voice_activity.bot.create_bot()
+    bot.run(token)
 
 if __name__ == '__main__':
     main()
