@@ -16,6 +16,11 @@ from voice_activity.utility import (
     unapply_ctx,
     get_voice_channel,
 )
+# this unused import is here so that plugin
+# autodiscovery discovers storage plugin earlier than
+# us as it is our dependency (we use `storage` field created
+# by it in our objects).
+from voice_activity.modules import storage
 
 
 LOGGER = logging.getLogger(__name__)

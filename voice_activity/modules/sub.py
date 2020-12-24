@@ -9,7 +9,11 @@ from voice_activity.abc import (
     AbstractListener,
     AbstractPlugin,
 )
-
+# this unused import is here so that plugin
+# autodiscovery discovers storage plugin earlier than
+# us as it is our dependency (we use `storage` field created
+# by it in our objects).
+from voice_activity.modules import storage
 
 LOGGER = logging.getLogger(__name__)
 
