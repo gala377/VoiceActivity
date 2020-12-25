@@ -9,6 +9,7 @@ from voice_activity.abc import (
     AbstractListener,
     AbstractPlugin,
 )
+from voice_activity.modules.default_modules import HelpMixin
 # this unused import is here so that plugin
 # autodiscovery discovers storage plugin earlier than
 # us as it is our dependency (we use `storage` field created
@@ -31,7 +32,7 @@ class SubPlugin(AbstractPlugin):
         bot.add_module(NotificationListener)
 
 
-class SubCommand(AbstractCommand):
+class SubCommand(AbstractCommand, HelpMixin):
 
     def name(self) -> str:
         return "sub"
@@ -46,8 +47,14 @@ class SubCommand(AbstractCommand):
         self._bot.storage._subs[chan.id].add(user)
         await resp_chan.send(f"subscribed you to channel {chan.name}")
 
+    def description(self):
+        return """
+            receive a notification when somebody starts
+            an activity on the given voice channel
+        """
 
-class UnsubCommand(AbstractCommand):
+
+class UnsubCommand(AbstractCommand, HelpMixin):
 
     def name(self) -> str:
         return "unsub"
@@ -60,6 +67,9 @@ class UnsubCommand(AbstractCommand):
             raise ValueError(f"channel {chan} doesn't exist")
         self._bot.storage._subs[chan.id].remove(user)
         await resp_chan.send(f"unsubscribed you from channel {chan.name}")
+
+    def description(self):
+        return "stop receiving notification about given channel"
 
 
 class NotificationListener(AbstractListener):

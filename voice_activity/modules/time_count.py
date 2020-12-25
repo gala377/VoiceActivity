@@ -16,6 +16,7 @@ from voice_activity.utility import (
     unapply_ctx,
     get_voice_channel,
 )
+from voice_activity.modules.default_modules import HelpMixin
 # this unused import is here so that plugin
 # autodiscovery discovers storage plugin earlier than
 # us as it is our dependency (we use `storage` field created
@@ -43,7 +44,7 @@ class TimeCountingPlugin(AbstractPlugin):
         bot.add_module(ShowTrackedChannels)
         bot.add_module(TimeListener)
 
-class TrackChannel(AbstractCommand):
+class TrackChannel(AbstractCommand, HelpMixin):
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -61,8 +62,15 @@ class TrackChannel(AbstractCommand):
         self.storage.tracked_channels[chan] = {}
         await resp_chan.send(f"channel {channel_name} is now tracked")
 
+    def description(self):
+        return """
+            start tracking activity time
+            on the given voice channel
+        """
 
-class UntrackChannel(AbstractCommand):
+
+
+class UntrackChannel(AbstractCommand, HelpMixin):
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -80,8 +88,14 @@ class UntrackChannel(AbstractCommand):
         del self.storage.time_counts[chan]
         await resp_chan.send(f"channel '{channel_name}' was removed from tracking")
 
+    def description(self):
+        return """
+            stop tracking activity time
+            on the given channel
+        """
 
-class ShowStats(AbstractCommand):
+
+class ShowStats(AbstractCommand, HelpMixin):
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -102,8 +116,14 @@ class ShowStats(AbstractCommand):
         msg += "\nThat is all"
         await resp_chan.send(msg)
 
+    def description(self):
+        return """
+            show activity time on the given
+            voice channel for each user
+        """
 
-class ShowTrackedChannels(AbstractCommand):
+
+class ShowTrackedChannels(AbstractCommand, HelpMixin):
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -119,6 +139,10 @@ class ShowTrackedChannels(AbstractCommand):
             msg += f"{chan.name}\n"
         msg += "\nThat's all"
         await resp_chan.send(msg)
+
+    def description(self):
+        return "show time-tracked channels"
+
 
 class TimeListener(AbstractListener):
 
