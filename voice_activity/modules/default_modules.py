@@ -1,4 +1,4 @@
-from typing import Sequence
+import textwrap
 
 from voice_activity.abc import (
     AbstractPlugin,
@@ -26,15 +26,16 @@ class HelpCommand(AbstractCommand):
         msg = f"{self._bot.name()} bot serves you with\n"
         for cmd, desc in descriptions.items():
             msg += f"\n{cmd:<20} -"
-            if not isinstance(desc, Sequence) or not desc:
+            if not isinstance(desc, str) or not desc:
                 msg += " empty or invalid help"
                 continue
+            desc = textwrap.fill(textwrap.dedent(msg))
+            desc = msg.splitlines()
             msg += desc[0]
-            for line in desc[1:]:
-                msg += f'{(" "*23)}{line}'
+            msg += textwrap.indent(desc[1:], " "*23)
         await resp_chan.send(msg)
 
 
 class HelpMixin:
-    def description(self) -> Sequence[str]:
+    def description(self) -> str:
         raise NotImplementedError
