@@ -163,7 +163,7 @@ class VoiceActivity(discord.Client):
         del self._users_context[user_id]
 
 
-def create_bot():
+def create_bot(*args, **kwargs):
     bot = VoiceActivity()
-    bot.autodiscover_plugins(voice_activity.modules)
+    bot.autodiscover_plugins(voice_activity.modules, *args, **kwargs)
     return bot
