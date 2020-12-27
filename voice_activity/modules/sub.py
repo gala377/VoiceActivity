@@ -1,8 +1,10 @@
+import os.path
 import asyncio
 import logging
 
-from types import SimpleNamespace
-from collections import defaultdict
+from tinydb import TinyDB
+
+from voice_activity.tinydb_defaultdict import TinyDBDefaultDict
 
 from voice_activity.abc import (
     AbstractCommand,
@@ -18,15 +20,20 @@ from voice_activity.modules import storage
 
 LOGGER = logging.getLogger(__name__)
 
-PER_CHAN_TIMEOUT = 60 # in seconds
+PER_CHAN_TIMEOUT = 60  # in seconds
 
 
 class SubPlugin(AbstractPlugin):
 
-    def __init__(self, bot, *args, **kwargs):
+    def __init__(self, bot, *args, config, **kwargs):
         if not hasattr(bot, "storage"):
             raise AttributeError("Storage plugin required to run SubModule")
-        bot.storage._subs = defaultdict(set)
+        if config is None:
+            raise AttributeError("Configuration is required")
+        db_path = os.path.join(config.data_direcotory, "subs.db")
+        db = TinyDB(db_path)
+        bot.storage._subs = TinyDBDefaultDict(db, set, list, set)
+
         bot.add_module(SubCommand)
         bot.add_module(UnsubCommand)
         bot.add_module(NotificationListener)
@@ -44,7 +51,11 @@ class SubCommand(AbstractCommand, HelpMixin):
             [chan] = [ch for ch in guild.voice_channels if ch.name == chan_name]
         except ValueError:
             raise ValueError(f"channel {chan_name} doesn't exist")
-        self._bot.storage._subs[chan.id].add(user)
+
+        subs = self._bot.storage._subs[chan.id]
+        subs.add(user.id)
+        self._bot.storage._subs[chan.id] = subs
+
         await resp_chan.send(f"subscribed you to channel {chan.name}")
 
     def description(self):
@@ -65,7 +76,9 @@ class UnsubCommand(AbstractCommand, HelpMixin):
             [chan] = [ch for ch in guild.voice_channels if ch.name == chan]
         except ValueError:
             raise ValueError(f"channel {chan} doesn't exist")
-        self._bot.storage._subs[chan.id].remove(user)
+        subs = self._bot.storage._subs[chan.id]
+        subs.remove(user.id)
+        self._bot.storage._subs[chan.id] = subs
         await resp_chan.send(f"unsubscribed you from channel {chan.name}")
 
     def description(self):
@@ -91,7 +104,8 @@ class NotificationListener(AbstractListener):
             LOGGER.info("%s just joined channel %s(%a)", mem.name, after.channel.name, after.channel.id)
             LOGGER.info("channel members %a", after.channel.members)
             self._timeouts.add(after.channel.id)
-            for user in self._bot.storage._subs[after.channel.id]:
+            for user_id in self._bot.storage._subs[after.channel.id]:
+                user = await mem.guild.fetch_member(user_id)
                 LOGGER.info("notifying user %s", user.name)
                 if user != mem:
                     await user.send(f"Activity started on {after.channel} by {mem.name}")
@@ -101,4 +115,3 @@ class NotificationListener(AbstractListener):
         await asyncio.sleep(PER_CHAN_TIMEOUT)
         LOGGER.debug("revoking timeout on channel %a", channel_id)
         self._timeouts.remove(channel_id)
-
