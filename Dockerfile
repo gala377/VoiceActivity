@@ -10,5 +10,6 @@ COPY poetry.lock pyproject.toml /app/
 RUN poetry install -n
 
 COPY voice_activity /app/voice_activity
-COPY .env* /app
+COPY .* /app/
+
 CMD ["python", "-m", "voice_activity"]
