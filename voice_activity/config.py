@@ -1,5 +1,6 @@
-from types import SimpleNamespace
+from dataclasses import dataclass
 
-voice_activity_config = SimpleNamespace(
-    data_direcotory="/data"
-)
+
+@dataclass
+class Config:
+    data_directory = "/data"
