@@ -1,0 +1,47 @@
+name: DeployMain
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: master
+    tags: "*"
+
+jobs:
+  buildAndDeploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+
+      - name: Install dependencies with poetry
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Test building docker image
+        run: docker build . -t bot_sylwek
+      - name: Clear app directory
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{ secrets.REMOTE_HOST }}
+            username: ${{ secrets.REMOTE_USER }}
+            password: ${{ secrets.REMOTE_PASSWORD }}
+            script: rm -rf voice-activity && mkdir -p voice-activity/app
+      - name: rsync
+        uses: easingthemes/ssh-deploy@v2.1.5
+        env:
+            SSH_PRIVATE_KEY: ${{ secrets.SERVER_SSH_KEY }}
+            REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+            REMOTE_USER: ${{ secrets.REMOTE_USER }}
+            TARGET: "/home/github-actions/voice-activity/app"
+      - name: Run application
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{ secrets.REMOTE_HOST }}
+            username: ${{ secrets.REMOTE_USER }}
+            password: ${{ secrets.REMOTE_PASSWORD }}
+            script: cd "voice-activity/app" && echo "BOT_TOKEN=${{ secrets.DISCORD_TOKEN }}" >> .env && docker build -t voice-activity . && docker-compose up -d

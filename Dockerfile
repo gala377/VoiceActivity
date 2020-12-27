@@ -1,5 +1,6 @@
 FROM python:3.8
 RUN mkdir /app
+RUN mkdir /data
 WORKDIR /app
 
 RUN pip install poetry

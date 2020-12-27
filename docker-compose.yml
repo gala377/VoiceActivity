@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  voice-activity:
+    image: voice-activity:latest
+    volumes:
+    - /home/github-actions/data/voice-activity:/data
