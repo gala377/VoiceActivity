@@ -3,8 +3,8 @@ name: DeployMain
 on:
   workflow_dispatch: {}
   push:
-    branches: master
-    tags: "*"
+    branches: main
+    tags: "v*"
 
 jobs:
   buildAndDeploy:
