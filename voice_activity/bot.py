@@ -93,8 +93,7 @@ class VoiceActivity(discord.Client):
             LOGGER.info("invoking command %s for user %s", cmd, user.name)
             await cmd(ctx, *args)
         except Exception as e:
-            LOGGER.info("couldn't parse command %a", e)
-            traceback.print_exc()
+            LOGGER.error("couldn't parse command %a, traceback: %s", e, traceback.format_exc())
             await resp_chan.send(str(e))
 
     def _parse_cmd(self, mess):

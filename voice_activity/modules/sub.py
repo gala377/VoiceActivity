@@ -4,8 +4,6 @@ import logging
 
 from tinydb import TinyDB
 
-from voice_activity.tinydb_defaultdict import TinyDBDefaultDict
-
 from voice_activity.abc import (
     AbstractCommand,
     AbstractListener,
@@ -17,6 +15,7 @@ from voice_activity.modules.default_modules import HelpMixin
 # us as it is our dependency (we use `storage` field created
 # by it in our objects).
 from voice_activity.modules import storage
+from voice_activity.tinydb_exts.defaultdict import DefaultDict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,9 +29,9 @@ class SubPlugin(AbstractPlugin):
             raise AttributeError("Storage plugin required to run SubModule")
         if config is None:
             raise AttributeError("Configuration is required")
-        db_path = os.path.join(config.data_direcotory, "subs.db")
+        db_path = os.path.join(config.data_directory, "subs.db")
         db = TinyDB(db_path)
-        bot.storage._subs = TinyDBDefaultDict(db, set, list, set)
+        bot.storage._subs = DefaultDict(db, set, list, set)
 
         bot.add_module(SubCommand)
         bot.add_module(UnsubCommand)

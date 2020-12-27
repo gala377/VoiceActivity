@@ -1,11 +1,13 @@
 from collections import abc
 from typing import Iterator, Any
-
 from tinydb import where
 
+def identity(val):
+    return val
 
-class TinyDBDefaultDict(abc.MutableMapping):
-    def __init__(self, tinydb, default_factory, serializer, deserializer):
+
+class DefaultDict(abc.MutableMapping):
+    def __init__(self, tinydb, default_factory, serializer=identity, deserializer=identity):
         self._client = tinydb
         self._default_factory = default_factory
         self._serializer = serializer
@@ -27,7 +29,7 @@ class TinyDBDefaultDict(abc.MutableMapping):
         self._client.remove(where('key') == key)
 
     def __iter__(self) -> Iterator:
-        values = self._client.search(lambda x: True)
+        values = self._client.all()
         return iter([v["key"] for v in values])
 
     def __len__(self) -> int:

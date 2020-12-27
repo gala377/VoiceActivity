@@ -1,8 +1,7 @@
-
-
 def unapply_ctx(ctx):
     user, guild, resp_chan = ctx['user'], ctx['guild'], ctx['resp_chan']
     return user, guild, resp_chan
+
 
 def get_voice_channel(guild, name):
     try:

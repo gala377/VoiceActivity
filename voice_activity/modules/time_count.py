@@ -15,7 +15,7 @@ from voice_activity.abc import (
     AbstractListener,
     AbstractPlugin,
 )
-from voice_activity.tinydb_defaultdict import TinyDBDefaultDict
+from voice_activity.tinydb_exts.defaultdict import DefaultDict
 from voice_activity.utility import (
     unapply_ctx,
     get_voice_channel,
@@ -26,6 +26,7 @@ from voice_activity.modules.default_modules import HelpMixin
 # autodiscovery discovers storage plugin earlier than
 # us as it is our dependency (we use `storage` field created
 # by it in our objects).
+from voice_activity.modules import storage
 
 LOGGER = logging.getLogger(__name__)
 
@@ -38,14 +39,12 @@ class TimeCountingPlugin(AbstractPlugin):
         if config is None:
             raise AttributeError("Configuration is required")
 
-        db_path = os.path.join(config.data_direcotory, "time_count.db")
+        db_path = os.path.join(config.data_directory, "time_count.db")
         db = TinyDB(db_path)
 
-        identity = lambda x: x
         bot.storage.time_counting = SimpleNamespace(
-            tracked_channels=TinyDBDefaultDict(TinyDB.table(db, "tracked_channels"), dict, identity, identity),
-            time_counts=TinyDBDefaultDict(TinyDB.table(db, "time_counts"), lambda: defaultdict(float), identity,
-                                          identity),
+            tracked_channels=DefaultDict(TinyDB.table(db, "tracked_channels"), dict),
+            time_counts=DefaultDict(TinyDB.table(db, "time_counts"), lambda: defaultdict(float)),
         )
 
         bot.add_module(TrackChannel)
