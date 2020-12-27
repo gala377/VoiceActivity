@@ -1,7 +1,7 @@
 import asyncio
 import re
 import logging
-import types
+import traceback
 import inspect
 import sys
 
@@ -94,6 +94,7 @@ class VoiceActivity(discord.Client):
             await cmd(ctx, *args)
         except Exception as e:
             LOGGER.info("couldn't parse command %a", e)
+            traceback.print_exc()
             await resp_chan.send(str(e))
 
     def _parse_cmd(self, mess):

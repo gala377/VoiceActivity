@@ -1,5 +1,8 @@
 import logging
+import os.path
+import time
 
+from tinydb import TinyDB
 from types import SimpleNamespace
 from collections import defaultdict
 from datetime import (
@@ -12,37 +15,45 @@ from voice_activity.abc import (
     AbstractListener,
     AbstractPlugin,
 )
+from voice_activity.tinydb_defaultdict import TinyDBDefaultDict
 from voice_activity.utility import (
     unapply_ctx,
     get_voice_channel,
 )
 from voice_activity.modules.default_modules import HelpMixin
+
 # this unused import is here so that plugin
 # autodiscovery discovers storage plugin earlier than
 # us as it is our dependency (we use `storage` field created
 # by it in our objects).
-from voice_activity.modules import storage
-
 
 LOGGER = logging.getLogger(__name__)
 
 
 class TimeCountingPlugin(AbstractPlugin):
 
-    def __init__(self, bot, *args, **kwargs):
+    def __init__(self, bot, *args, config, **kwargs):
         if not hasattr(bot, "storage"):
             raise AttributeError("Storage plugin required to use time counting plugin.")
-        bot.storage.time_counting = SimpleNamespace()
-        storage = bot.storage.time_counting
+        if config is None:
+            raise AttributeError("Configuration is required")
 
-        storage.tracked_channels = {}
-        storage.time_counts = {}
+        db_path = os.path.join(config.data_direcotory, "time_count.db")
+        db = TinyDB(db_path)
+
+        identity = lambda x: x
+        bot.storage.time_counting = SimpleNamespace(
+            tracked_channels=TinyDBDefaultDict(TinyDB.table(db, "tracked_channels"), dict, identity, identity),
+            time_counts=TinyDBDefaultDict(TinyDB.table(db, "time_counts"), lambda: defaultdict(float), identity,
+                                          identity),
+        )
 
         bot.add_module(TrackChannel)
         bot.add_module(UntrackChannel)
         bot.add_module(ShowStats)
         bot.add_module(ShowTrackedChannels)
         bot.add_module(TimeListener)
+
 
 class TrackChannel(AbstractCommand, HelpMixin):
 
@@ -57,7 +68,7 @@ class TrackChannel(AbstractCommand, HelpMixin):
         _, guild, resp_chan = unapply_ctx(ctx)
         chan = get_voice_channel(guild, channel_name)
         if chan in self.storage.tracked_channels:
-           return await resp_chan.send(f"channel '{channel_name}' is already tracked")
+            return await resp_chan.send(f"channel '{channel_name}' is already tracked")
         self.storage.time_counts[chan] = defaultdict(lambda: timedelta(seconds=0))
         self.storage.tracked_channels[chan] = {}
         await resp_chan.send(f"channel {channel_name} is now tracked")
@@ -67,7 +78,6 @@ class TrackChannel(AbstractCommand, HelpMixin):
             start tracking activity time
             on the given voice channel
         """
-
 
 
 class UntrackChannel(AbstractCommand, HelpMixin):
@@ -83,7 +93,7 @@ class UntrackChannel(AbstractCommand, HelpMixin):
         _, guild, resp_chan = unapply_ctx(ctx)
         chan = get_voice_channel(guild, channel_name)
         if chan not in self.storage.tracked_channels:
-           return await resp_chan.send(f"channel '{channel_name}' is not being tracked")
+            return await resp_chan.send(f"channel '{channel_name}' is not being tracked")
         del self.storage.tracked_channels[chan]
         del self.storage.time_counts[chan]
         await resp_chan.send(f"channel '{channel_name}' was removed from tracking")
@@ -107,12 +117,15 @@ class ShowStats(AbstractCommand, HelpMixin):
     async def run(self, ctx, chan_name):
         _, guild, resp_chan = unapply_ctx(ctx)
         chan = get_voice_channel(guild, chan_name)
-        if chan not in self.storage.tracked_channels:
-           return await resp_chan.send(f"channel '{chan_name}' is not being tracked")
-        stats = self.storage.time_counts[chan]
+        if chan.id not in self.storage.tracked_channels:
+            return await resp_chan.send(f"channel '{chan_name}' is not being tracked")
+        stats = self.storage.time_counts[chan.id]
         msg = f"Stats for channel '{chan_name}':\n\n"
-        for user, time in stats.items():
-            msg += f"{user.name}: {time}\n"
+
+        for user_id, tim in stats.items():
+            user = await guild.fetch_member(user_id)
+            t = time.strftime('%H:%M:%S', time.gmtime(tim))
+            msg += f"{user.name}: {t}\n"
         msg += "\nThat is all"
         await resp_chan.send(msg)
 
@@ -135,7 +148,8 @@ class ShowTrackedChannels(AbstractCommand, HelpMixin):
     async def run(self, ctx):
         _, guild, resp_chan = unapply_ctx(ctx)
         msg = "Tracked channels:\n\n"
-        for chan in self.storage.tracked_channels:
+        for chan_id in self.storage.tracked_channels:
+            chan = guild.get_channel(chan_id)
             msg += f"{chan.name}\n"
         msg += "\nThat's all"
         await resp_chan.send(msg)
@@ -158,10 +172,17 @@ class TimeListener(AbstractListener):
             return
         if aft.channel is not None and aft.channel in self.storage.tracked_channels:
             LOGGER.debug("%a Appeared in channel %a", mem.name, aft.channel.name)
-            self.storage.tracked_channels[aft.channel][mem] = datetime.utcnow()
+            chan = self.storage.tracked_channels[aft.channel.id]
+            chan[str(mem.id)] = datetime.utcnow().timestamp()
+            self.storage.tracked_channels[aft.channel.id] = chan
+
         if bef.channel is not None and bef.channel in self.storage.tracked_channels:
             LOGGER.debug("%a Left channel %a", mem.name, bef.channel.name)
-            now = datetime.utcnow()
-            appeared_at = self.storage.tracked_channels[bef.channel].get(mem, now)
+            now = datetime.utcnow().timestamp()
+            tracked_chan = self.storage.tracked_channels[bef.channel.id]
+            appeared_at = tracked_chan[str(mem.id)]
             diff = now - appeared_at
-            self.storage.time_counts[bef.channel][mem] += diff
+
+            chan = self.storage.time_counts[bef.channel.id]
+            chan[str(mem.id)] += diff
+            self.storage.time_counts[bef.channel.id] = chan
